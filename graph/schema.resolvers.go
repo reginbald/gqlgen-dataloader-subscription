@@ -9,66 +9,49 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/reginbald/gqlgen-dataloader-subscription/graph/model"
+	"github.com/reginbald/gqlgen-dataloader-subscription/loaders"
 )
 
 // CreateTodo is the resolver for the createTodo field.
 func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	id, err := uuid.NewUUID()
+	todo, err := r.Repo.CreateTodo(input.Text, false, input.UserID)
 	if err != nil {
 		return nil, err
 	}
-
-	user, ok := r.Users[input.UserID]
-	if !ok {
-		user = &model.User{ID: input.UserID, Name: "user " + input.UserID}
-		r.Users[input.UserID] = user
-	}
-
-	todo := &model.Todo{
-		Text: input.Text,
-		ID:   id.String(),
-		User: user,
-	}
-	r.Todos[id.String()] = todo
-	return todo, nil
-}
-
-// UpdateTodo is the resolver for the updateTodo field.
-func (r *mutationResolver) UpdateTodo(ctx context.Context, input model.UpdateTodo) (*model.Todo, error) {
-	todo, ok := r.Todos[input.ID]
-	if !ok {
-		return nil, fmt.Errorf("not found")
-	}
-
-	user, ok := r.Users[input.UserID]
-	if !ok {
-		user = &model.User{ID: input.UserID, Name: "user " + input.UserID}
-		r.Users[input.UserID] = user
-	}
-
-	todo.Text = input.Text
-	todo.Done = input.Done
-	todo.User = user
-
-	r.Todos[todo.ID] = todo
-	return todo, nil
+	return &model.Todo{
+		ID:   todo.ID.String(),
+		Text: todo.Text,
+		Done: todo.Done,
+		User: &model.User{
+			ID:   todo.User.ID.String(),
+			Name: "", // resolver
+		},
+	}, nil
 }
 
 // GetTodo is the resolver for the getTodo field.
 func (r *queryResolver) GetTodo(ctx context.Context, id string) (*model.Todo, error) {
-	todo, ok := r.Todos[id]
-	if !ok {
-		return nil, fmt.Errorf("not found")
+	todo, err := r.Repo.GetTodo(id)
+	if err != nil {
+		return nil, err
 	}
-	return todo, nil
+	return &model.Todo{
+		ID:   id,
+		Text: todo.Text,
+		Done: todo.Done,
+		User: &model.User{
+			ID:   todo.User.ID.String(),
+			Name: "", // resolver
+		},
+	}, nil
 }
 
 // Todo is the resolver for the todo field.
 func (r *subscriptionResolver) Todo(ctx context.Context, id string) (<-chan *model.Todo, error) {
-	if _, ok := r.Todos[id]; !ok {
-		return nil, fmt.Errorf("not found")
+
+	if _, err := r.Repo.GetTodo(id); err != nil {
+		return nil, err
 	}
 	ch := make(chan *model.Todo)
 
@@ -79,25 +62,27 @@ func (r *subscriptionResolver) Todo(ctx context.Context, id string) (<-chan *mod
 		for {
 			// In our example we'll send the current time every second.
 			time.Sleep(1 * time.Second)
-			fmt.Println("Tick")
 
-			currentTime := time.Now()
-
-			for _, user := range r.Users {
-				r.Users[user.ID] = &model.User{
-					ID:   user.ID,
-					Name: fmt.Sprintf("user %s %d", user.ID, int(currentTime.Unix())),
-				}
+			t, err := r.Repo.GetTodo(id)
+			if err != nil {
+				fmt.Println("Store returned an error: %w", err)
+				return
 			}
-
-			t := r.Todos[id]
 
 			select {
 			case <-ctx.Done(): // This runs when context gets cancelled. Subscription closes.
 				fmt.Println("Subscription Closed")
 				return
 
-			case ch <- t:
+			case ch <- &model.Todo{
+				ID:   id,
+				Text: t.Text,
+				Done: t.Done,
+				User: &model.User{
+					ID:   t.User.ID.String(),
+					Name: "", // resolver
+				},
+			}:
 			}
 		}
 	}()
@@ -108,12 +93,8 @@ func (r *subscriptionResolver) Todo(ctx context.Context, id string) (<-chan *mod
 
 // User is the resolver for the user field.
 func (r *todoResolver) User(ctx context.Context, obj *model.Todo) (*model.User, error) {
-	user, ok := r.Users[obj.User.ID]
-	if !ok {
-		return nil, fmt.Errorf("not found")
-	}
-
-	return user, nil
+	loaders := loaders.For(ctx)
+	return loaders.UserLoader.Load(ctx, obj.User.ID)
 }
 
 // Mutation returns MutationResolver implementation.
