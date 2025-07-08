@@ -22,7 +22,7 @@ func (r *Repository) CreateUser(name string) (*User, error) {
 	return &User{ID: id, Name: name}, nil
 }
 
-func (r *Repository) GetUser(id string) (*User, error) {
+func (r *Repository) GetUser(id uuid.UUID) (*User, error) {
 	var user User
 	err := r.DB.QueryRow(`SELECT id, name FROM users WHERE id = $1`, id).Scan(&user.ID, &user.Name)
 	if err != nil {
@@ -31,7 +31,7 @@ func (r *Repository) GetUser(id string) (*User, error) {
 	return &user, nil
 }
 
-func (r *Repository) UpdateUser(id string, name string) error {
+func (r *Repository) UpdateUser(id uuid.UUID, name string) error {
 	res, err := r.DB.Exec(`UPDATE users SET name = $1 WHERE id = $2`, name, id)
 	if err != nil {
 		return err
@@ -43,7 +43,7 @@ func (r *Repository) UpdateUser(id string, name string) error {
 	return nil
 }
 
-func (r *Repository) DeleteUser(id string) error {
+func (r *Repository) DeleteUser(id uuid.UUID) error {
 	res, err := r.DB.Exec(`DELETE FROM users WHERE id = $1`, id)
 	if err != nil {
 		return err
@@ -78,7 +78,7 @@ func (r *Repository) GetUsers() ([]*User, error) {
 
 // -------------------- Todo CRUD --------------------
 
-func (r *Repository) CreateTodo(text string, done bool, userID string) (*Todo, error) {
+func (r *Repository) CreateTodo(text string, done bool, userID uuid.UUID) (*Todo, error) {
 	id := uuid.New()
 	_, err := r.DB.Exec(`INSERT INTO todos (id, text, done, user_id) VALUES ($1, $2, $3, $4)`, id, text, done, userID)
 	if err != nil {
@@ -91,9 +91,9 @@ func (r *Repository) CreateTodo(text string, done bool, userID string) (*Todo, e
 	return &Todo{ID: id, Text: text, Done: done, User: user}, nil
 }
 
-func (r *Repository) GetTodo(id string) (*Todo, error) {
+func (r *Repository) GetTodo(id uuid.UUID) (*Todo, error) {
 	var todo Todo
-	var userID string
+	var userID uuid.UUID
 	err := r.DB.QueryRow(`SELECT id, text, done, user_id FROM todos WHERE id = $1`, id).
 		Scan(&todo.ID, &todo.Text, &todo.Done, &userID)
 	if err != nil {
@@ -107,7 +107,7 @@ func (r *Repository) GetTodo(id string) (*Todo, error) {
 	return &todo, nil
 }
 
-func (r *Repository) UpdateTodo(id string, text string, done bool) error {
+func (r *Repository) UpdateTodo(id uuid.UUID, text string, done bool) error {
 	res, err := r.DB.Exec(`UPDATE todos SET text = $1, done = $2 WHERE id = $3`, text, done, id)
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func (r *Repository) UpdateTodo(id string, text string, done bool) error {
 	return nil
 }
 
-func (r *Repository) DeleteTodo(id string) error {
+func (r *Repository) DeleteTodo(id uuid.UUID) error {
 	res, err := r.DB.Exec(`DELETE FROM todos WHERE id = $1`, id)
 	if err != nil {
 		return err

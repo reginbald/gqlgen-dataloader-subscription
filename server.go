@@ -49,7 +49,7 @@ func main() {
 				return
 			}
 			for _, user := range users {
-				repo.UpdateUser(user.ID.String(), fmt.Sprintf("user %s %d", user.ID, int(currentTime.Unix())))
+				repo.UpdateUser(user.ID, fmt.Sprintf("user %s %d", user.ID, int(currentTime.Unix())))
 			}
 		}
 	}()

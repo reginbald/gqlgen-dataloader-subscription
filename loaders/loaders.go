@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/reginbald/gqlgen-dataloader-subscription/graph/model"
 	"github.com/reginbald/gqlgen-dataloader-subscription/repository"
 	"github.com/vikstrous/dataloadgen"
@@ -29,9 +30,10 @@ func NewLoaders(repo *repository.Repository) *Loaders {
 			errs := make([]error, 0, len(keys))
 
 			for _, key := range keys {
-				user, err := repo.GetUser(key)
+				id, _ := uuid.Parse(key)
+				user, err := repo.GetUser(id)
 				res = append(res, &model.User{
-					ID:   user.ID.String(),
+					ID:   user.ID,
 					Name: user.Name,
 				})
 				errs = append(errs, err)

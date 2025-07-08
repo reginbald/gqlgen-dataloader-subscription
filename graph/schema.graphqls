@@ -1,26 +1,24 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
+scalar UUID
 
 type Todo {
-  id: ID!
+  id: UUID!
   text: String!
   done: Boolean!
   user: User!
 }
 
 type User {
-  id: ID!
+  id: UUID!
   name: String!
 }
 
 input NewTodo {
   text: String!
-  userId: String!
+  userId: UUID!
 }
 
 type Query {
-  getTodo(id: ID!): Todo!
+  getTodo(id: UUID!): Todo!
 }
 
 type Mutation {
@@ -28,5 +26,5 @@ type Mutation {
 }
 
 type Subscription {
-  todo(id: ID!): Todo!
+  todo(id: UUID!): Todo!
 }

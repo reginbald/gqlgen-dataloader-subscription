@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/reginbald/gqlgen-dataloader-subscription/graph/model"
 	"github.com/reginbald/gqlgen-dataloader-subscription/loaders"
 )
@@ -20,18 +21,18 @@ func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) 
 		return nil, err
 	}
 	return &model.Todo{
-		ID:   todo.ID.String(),
+		ID:   todo.ID,
 		Text: todo.Text,
 		Done: todo.Done,
 		User: &model.User{
-			ID:   todo.User.ID.String(),
+			ID:   todo.User.ID,
 			Name: "", // resolver
 		},
 	}, nil
 }
 
 // GetTodo is the resolver for the getTodo field.
-func (r *queryResolver) GetTodo(ctx context.Context, id string) (*model.Todo, error) {
+func (r *queryResolver) GetTodo(ctx context.Context, id uuid.UUID) (*model.Todo, error) {
 	todo, err := r.Repo.GetTodo(id)
 	if err != nil {
 		return nil, err
@@ -41,15 +42,14 @@ func (r *queryResolver) GetTodo(ctx context.Context, id string) (*model.Todo, er
 		Text: todo.Text,
 		Done: todo.Done,
 		User: &model.User{
-			ID:   todo.User.ID.String(),
+			ID:   todo.User.ID,
 			Name: "", // resolver
 		},
 	}, nil
 }
 
 // Todo is the resolver for the todo field.
-func (r *subscriptionResolver) Todo(ctx context.Context, id string) (<-chan *model.Todo, error) {
-
+func (r *subscriptionResolver) Todo(ctx context.Context, id uuid.UUID) (<-chan *model.Todo, error) {
 	if _, err := r.Repo.GetTodo(id); err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (r *subscriptionResolver) Todo(ctx context.Context, id string) (<-chan *mod
 				Text: t.Text,
 				Done: t.Done,
 				User: &model.User{
-					ID:   t.User.ID.String(),
+					ID:   t.User.ID,
 					Name: "", // resolver
 				},
 			}:
@@ -94,7 +94,7 @@ func (r *subscriptionResolver) Todo(ctx context.Context, id string) (<-chan *mod
 // User is the resolver for the user field.
 func (r *todoResolver) User(ctx context.Context, obj *model.Todo) (*model.User, error) {
 	loaders := loaders.For(ctx)
-	return loaders.UserLoader.Load(ctx, obj.User.ID)
+	return loaders.UserLoader.Load(ctx, obj.User.ID.String())
 }
 
 // Mutation returns MutationResolver implementation.
