@@ -6,8 +6,6 @@ package graph
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/reginbald/gqlgen-dataloader-subscription/graph/model"
@@ -60,29 +58,23 @@ func (r *subscriptionResolver) Todo(ctx context.Context, id uuid.UUID) (<-chan *
 		defer close(ch)
 
 		for {
-			// In our example we'll send the current time every second.
-			time.Sleep(1 * time.Second)
-
-			t, err := r.Repo.GetTodo(id)
-			if err != nil {
-				fmt.Println("Store returned an error: %w", err)
-				return
-			}
-
 			select {
-			case <-ctx.Done(): // This runs when context gets cancelled. Subscription closes.
-				fmt.Println("Subscription Closed")
-				return
-
-			case ch <- &model.Todo{
-				ID:   id,
-				Text: t.Text,
-				Done: t.Done,
-				User: &model.User{
-					ID:   t.User.ID,
-					Name: "", // resolver
-				},
-			}:
+			case <-ctx.Done():
+				return // client disconnected
+			case _, ok := <-r.EventChannel:
+				if !ok {
+					return // channel closed
+				}
+				t, _ := r.Repo.GetTodo(id)
+				ch <- &model.Todo{
+					ID:   id,
+					Text: t.Text,
+					Done: t.Done,
+					User: &model.User{
+						ID:   t.User.ID,
+						Name: "", // resolver
+					},
+				}
 			}
 		}
 	}()

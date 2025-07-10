@@ -5,5 +5,6 @@ import (
 )
 
 type Resolver struct {
-	Repo *repository.Repository
+	Repo         *repository.Repository
+	EventChannel <-chan int
 }

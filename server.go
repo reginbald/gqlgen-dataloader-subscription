@@ -37,24 +37,27 @@ func main() {
 
 	repo := &repository.Repository{DB: db}
 
+	eventChannel := make(chan int)
+
 	// Change name every second
 	go func() {
 		for {
 			// In our example we'll send the current time every second.
 			time.Sleep(1 * time.Second)
 
-			currentTime := time.Now()
+			currentTime := int(time.Now().Unix())
 			users, err := repo.GetUsers()
 			if err != nil {
 				return
 			}
 			for _, user := range users {
-				repo.UpdateUser(user.ID, fmt.Sprintf("user %s %d", user.ID, int(currentTime.Unix())))
+				repo.UpdateUser(user.ID, fmt.Sprintf("user %s %d", user.ID, currentTime))
 			}
+			eventChannel <- currentTime
 		}
 	}()
 
-	h := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{Repo: repo}}))
+	h := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{Repo: repo, EventChannel: eventChannel}}))
 
 	h.AddTransport(transport.Websocket{})
 	h.AddTransport(transport.Options{})
